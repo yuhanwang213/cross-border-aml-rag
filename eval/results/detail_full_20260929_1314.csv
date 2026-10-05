@@ -1,0 +1,4 @@
+﻿id,type,role,question,expect,refused,reason,top_score,hit@1,hit@k,gold_rank,cited,cited_gold,cited_gold_n,dropped_citations,leaked,restricted,retrieved,answer,key,seconds
+N01,normal,普通员工,差旅费报销的时限是多久？,answer,False,,0.588,False,True,2,"[""INT-002#第四条"", ""INT-002#第五条""]",True,1,0,[],False,"[""INT-002#第五条"", ""INT-002#第四条"", ""INT-002#第十二条"", ""INT-002#第二十五条"", ""INT-002#第六条""]",员工应当在费用发生后30个自然日内提交报销申请；跨年度费用应当在次年1月15日前完成报销。[1]超过报销时限的，须经部门负责人和财务总监书面同意后方可报销；超过90个自然日的，原则上不予报销。[2],费用发生后30个自然日内；跨年度次年1月15日前,17.0
+O01,out_of_kb,普通员工,员工每年有几天带薪年假？,refuse,True,no_evidence,0.001,False,False,,[],False,0,0,[],False,"[""INT-002#第八条"", ""INT-001#第四条"", ""INT-001#第十一条"", ""INT-002#第十条"", ""INT-002#第四条""]",知识库中没有相关规定。,,1.6
+U01,unauthorized,普通员工,关联交易审批细则规定，与关联自然人交易多少金额要提交董事会？,refuse,True,restricted,0.247,False,False,,[],False,0,0,[],True,"[""PUB-003#第一百八十二条"", ""INT-002#第十七条"", ""INT-001#第八条"", ""PUB-003#第一百八十五条"", ""PUB-003#第一百三十五条""]",知识库中没有相关规定。,,4.4

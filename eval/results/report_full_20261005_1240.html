@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAG 评测报告</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono&display=swap">
+<style>
+/* 布局：顶部摘要 → 指标条 → 可筛选的逐题清单（每题可展开看回答、引用、案例） */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --ink:#1b2330; --muted:#5c6776; --line:#dde1e7;
+  --accent:#b3261e; --accent-soft:#f8e6e4;
+  --ok:#1f7a4d; --ok-soft:#e3f2ea; --warn:#9a6700; --warn-soft:#fbf1dc; --bad:#b3261e; --bad-soft:#f8e6e4;
+  --risk:#b4541a; --risk-soft:#fbebe0;
+  --display:"Noto Serif SC","Songti SC","STSong",serif;
+  --body:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --surface:#1a2029; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2c3440;
+  --accent:#ef7b6f; --accent-soft:#3a2220;
+  --ok:#5fc592; --ok-soft:#173226; --warn:#e3b04b; --warn-soft:#3a2f15; --bad:#ef7b6f; --bad-soft:#3a2220;
+  --risk:#f09a5e; --risk-soft:#3a2818; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --surface:#1a2029; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2c3440;
+  --accent:#ef7b6f; --accent-soft:#3a2220;
+  --ok:#5fc592; --ok-soft:#173226; --warn:#e3b04b; --warn-soft:#3a2f15; --bad:#ef7b6f; --bad-soft:#3a2220;
+  --risk:#f09a5e; --risk-soft:#3a2818; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--body);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px 64px;display:grid;gap:28px}
+header{display:grid;gap:6px;border-bottom:2px solid var(--ink);padding-bottom:16px}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;color:var(--accent)}
+h1{font:700 30px/1.25 var(--display);margin:0;text-wrap:balance}
+.meta{color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.kpi{background:var(--surface);padding:14px 16px;display:grid;gap:4px;min-width:0}
+.kpi .name{font-size:13px;color:var(--muted)}
+.kpi .val{font:700 28px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.kpi .frac{font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.kpi .bar{height:4px;background:var(--line)}
+.kpi .bar i{display:block;height:100%;background:var(--ok)}
+.kpi.inverse .bar i{background:var(--accent)}
+.kpi .hint{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:5px 12px;border-radius:999px;cursor:pointer}
+.toolbar button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.toolbar button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toolbar .count{margin-left:auto;color:var(--muted);font-size:13px}
+.list{display:grid;gap:8px}
+details.q{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok)}
+details.q.flag{border-left-color:var(--accent)}
+summary{list-style:none;cursor:pointer;padding:12px 16px;display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:start}
+summary::-webkit-details-marker{display:none}
+.qid{font:600 13px var(--mono);color:var(--muted);padding-top:2px}
+.qtext{min-width:0;display:grid;gap:6px}
+.qtext .text{font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:12px;line-height:1;padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.risk{background:var(--risk-soft);color:var(--risk);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.side{text-align:right;font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.body{padding:4px 16px 18px 80px;display:grid;gap:14px;min-width:0}
+.body h3{font:600 12px/1 var(--body);letter-spacing:.1em;color:var(--muted);margin:0 0 6px}
+.answer{white-space:pre-wrap;max-width:72ch;overflow-wrap:anywhere}
+.ref{color:var(--accent);font-weight:700;font-size:11px;padding:0 1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:12px var(--mono);padding:3px 7px;border:1px solid var(--line);border-radius:3px;overflow-wrap:anywhere}
+.chip.gold{border-color:var(--ok);color:var(--ok)}
+.issues{color:var(--accent);font-weight:600}
+.key{color:var(--muted);font-size:14px}
+.empty{color:var(--muted)}
+@media (max-width:640px){
+  summary{grid-template-columns:1fr;gap:6px}
+  .side{text-align:left}
+  .body{padding:4px 16px 18px}
+  h1{font-size:24px}
+}
+@media (prefers-reduced-motion:no-preference){details.q{transition:border-color .2s}}
+</style>
+<div class="wrap">
+<header>
+  <span class="eyebrow">资金出境与反洗钱合规问答 · 完整问答评测</span>
+  <h1>评测报告 2026-10-05 12:40</h1>
+  <span class="meta">共 10 题：法规问答 10、场景评估 0、知识库外 0；
+  需关注 0 题；平均每题 13.4 秒。数据来源：detail_full_20261005_1240.csv</span>
+</header>
+<section class="kpis"><div class="kpi"><span class="name">检索命中率</span><span class="val">100%</span><span class="frac">10/10</span><span class="bar"><i style="width:100%"></i></span><span class="hint">标准条款出现在检索结果中</span></div><div class="kpi"><span class="name">引用准确率</span><span class="val">100%</span><span class="frac">10/10</span><span class="bar"><i style="width:100%"></i></span><span class="hint">作答且引用了标准条款</span></div><div class="kpi"><span class="name">要点覆盖率</span><span class="val">100%</span><span class="frac">10/10</span><span class="bar"><i style="width:100%"></i></span><span class="hint">回答包含全部必备要点</span></div><div class="kpi"><span class="name">拒答正确率</span><span class="val">—</span><span class="frac">0/0</span><span class="bar"><i style="width:0%"></i></span><span class="hint">知识库外问题正确拒答</span></div><div class="kpi inverse"><span class="name">误拒率</span><span class="val">0%</span><span class="frac">0/10</span><span class="bar"><i style="width:0%"></i></span><span class="hint">应回答却拒答，越低越好</span></div><div class="kpi"><span class="name">案例触发准确率</span><span class="val">—</span><span class="frac">0/0</span><span class="bar"><i style="width:0%"></i></span><span class="hint">该展示案例时展示、不该时不展示</span></div></section>
+<section class="toolbar" aria-label="筛选">
+  <button type="button" data-f="all">全部</button>
+  <button type="button" data-f="flag">需关注</button>
+  <button type="button" data-f="normal">法规问答</button>
+  <button type="button" data-f="scenario">场景评估</button>
+  <button type="button" data-f="out_of_kb">知识库外</button>
+  <span class="count"></span>
+</section>
+<section class="list"><details class="q" data-type="normal"><summary><span class="qid">H01</span><span class="qtext"><span class="text">我有个朋友是做跨境电商的，他找人把好几亿人民币分批弄到香港，换成美元，中间用了好多空壳公司做假的进口贸易和物流单子，他说这就是正常换汇。可我总觉得不对劲，这到底是骗购外汇、非法经营，还是洗钱啊？您给说说。</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.922<br>24.9s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">你朋友的行为可能同时涉及骗购外汇、非法买卖外汇（非法经营）乃至洗钱，需按具体情形分别评价。1.以虚假、无效的交易单证（假进口贸易、物流单子）向金融机构骗购外汇，属骗购外汇行为，数额较大的依《决定》第一项处五年以下有期徒刑或拘役，并处骗购外汇数额5%以上30%以下罚金，数额巨大或特别巨大则加重至十年以上或无期；尚不构成犯罪的，由外汇管理机关责令回兑，处非法套汇金额30%以下罚款，情节严重的处30%以上等值以下罚款<sup class="ref">1</sup><sup class="ref">2</sup>。2.在国家规定交易场所以外买卖外汇，或以境内外“对敲”方式实现资金跨境兑付的变相买卖外汇，扰乱市场秩序，情节严重的以非法经营罪定罪处罚；非法经营数额五百万元以上或违法所得十万元以上为“情节严重”，二千五百万元以上或违法所得五十万元以上为“情节特别严重”<sup class="ref">3</sup><sup class="ref">4</sup>。3.若其上游资金来源于洗钱罪七类犯罪（如集资诈骗等金融诈骗犯罪），帮助跨境转移资产的，可能构成洗钱罪<sup class="ref">5</sup>；上游不属于七类犯罪的，一般不构成洗钱罪，可能适用掩饰、隐瞒犯罪所得、犯罪所得收益罪<sup class="ref">6</sup>。同时构成非法经营罪与洗钱罪的，依照处罚较重的规定定罪处罚<sup class="ref">7</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip">PUB-047#第一项</span><span class="chip gold">PUB-017#第四十条</span><span class="chip">PUB-048#第5问</span><span class="chip">PUB-048#第6问</span><span class="chip">PUB-012#第一百九十一条</span><span class="chip">PUB-012#第三百一十二条</span><span class="chip">PUB-001#第五条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例1 黄某洗钱案(0.62)</span></div></div><div><h3>参考答案</h3><div class="key">以虚假进口贸易、物流单据向银行购汇并转移境外，行政上属于外汇管理条例第四十条的&quot;以虚假交易单证骗购外汇&quot;（非法套汇）；为他人提供此类换汇服务、数额达标的，可按非法买卖外汇以非法经营罪定罪（500万元以上或违法所得10万元以上为情节严重）；只有资金属于七类上游犯罪所得且为掩饰其来源时，才涉及洗钱罪。（原参考答案&quot;不是骗购外汇、不是洗钱&quot;，经核对修订，2026-09-30）</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H02</span><span class="qtext"><span class="text">我下个月要出国，想带一笔现金出去，大概超过规定金额了。我听人说超过限额要向海关申报，但也有人说要向反洗钱部门备案，还有说要找外汇局登记。到底该跟谁申报啊？不申报会怎么样？</span><span class="tags"><span class="pill">法规问答</span><span class="pill warn">有条件可行（需办理手续或受额度限制）</span><span class="pill ok">通过</span></span></span><span class="side">top 0.999<br>30.5s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">个人携带外币现钞出境，超过等值5000美元至1万美元（含）应向银行申领《携带外汇出境许可证》，超过等值1万美元原则上不得携带，确需携带应向外汇局申领《携带证》<sup class="ref">1</sup><sup class="ref">2</sup>。申报对象是海关（凭《携带证》验放），不是反洗钱部门备案；不申报或违规携带可能被警告、处违法金额20%以下罚款<sup class="ref">3</sup>。
+个人携带外币现钞出境，没有或超出最近一次入境申报数额记录的，按金额分档管理：5000美元以内（含）免《携带证》；5000美元以上至1万美元（含）向银行申领《携带证》；1万美元以上向存款或购汇银行所在地外汇局申领《携带证》<sup class="ref">1</sup>。原则上不得携带超过等值1万美元外币现钞出境，特殊情况确需携带的，应向外汇局申领《携带证》<sup class="ref">2</sup>。出入境携带现金超过规定金额的，应向海关申报，海关发现超额的应及时向反洗钱行政主管部门通报<sup class="ref">4</sup>。
+出境金额在等值5000美元以上至1万美元（含）的，向银行申领《携带证》，海关凭加盖银行印章的《携带证》验放；使用多张《携带证》累计超过等值1万美元的，海关不予放行<sup class="ref">1</sup>。超过等值1万美元的，向存款或购汇银行所在地外汇局申领《携带证》，海关凭加盖外汇局印章的《携带证》验放<sup class="ref">1</sup>。若不超过最近一次入境时申报的外币现钞数额，不需申领《携带证》，海关凭该申报记录验放<sup class="ref">5</sup>。当天多次往返、短期内多次往返者另有更严格的限额和申报要求<sup class="ref">6</sup>。
+违反规定携带外汇出入境的，由外汇管理机关给予警告，可以处违法金额20%以下的罚款；法律、行政法规规定由海关予以处罚的，从其规定<sup class="ref">3</sup>。个人携带物品进出境申报不实的，海关可予以警告、处物品价值20%以下罚款，有违法所得的没收违法所得（该条例已修改，需核实现行版本）<sup class="ref">7</sup>。未按规定申领《携带证》或超额携带，海关可不予放行<sup class="ref">6</sup><sup class="ref">1</sup>。
+先确认自己是否属于当天多次往返或短期内多次往返，若是则适用更严格的限额<sup class="ref">6</sup>。按出境金额选择渠道：5000美元以上至1万美元（含）向银行申领《携带证》<sup class="ref">1</sup>；确需超过1万美元的，向存款或购汇银行所在地外汇局申领《携带证》<sup class="ref">2</sup>。也可按规定通过银行汇出或携带汇票、旅行支票、国际信用卡等方式将外币携出境外<sup class="ref">2</sup>。出境时备好《携带证》或最近一次入境申报记录，配合海关验放<sup class="ref">5</sup><sup class="ref">1</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-036#第五条</span><span class="chip gold">PUB-036#第七条</span><span class="chip gold">PUB-017#第四十二条</span><span class="chip">PUB-014#第十八条</span><span class="chip">PUB-036#第四条</span><span class="chip">PUB-036#第六条</span><span class="chip">PUB-046#第十九条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="empty">未展示</span></div></div><div><h3>参考答案</h3><div class="key">应向海关申报；不申报可能被海关罚款、没收，严重的还会追究刑事责任。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H03</span><span class="qtext"><span class="text">我看新闻说有人洗钱五百多万，结果被判了“情节严重”，刑期很重。我想问问，是不是只要洗钱超过五百万就一定算情节严重？还是说还得有其他条件？比如他要是第一次干，也主动退赃了，还会被认定情节严重吗？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.999<br>8.2s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">不是只要超过五百万元就一定算“情节严重”，还需同时具备法定情形之一。依《最高人民法院、最高人民检察院关于办理洗钱刑事案件适用法律若干问题的解释》第四条，洗钱数额在五百万元以上，且具有下列情形之一的，才应认定为“情节严重”：（一）多次实施洗钱行为的；（二）拒不配合财物追缴，致使赃款赃物无法追缴的；（三）造成损失二百五十万元以上的；（四）造成其他严重后果的。<sup class="ref">1</sup>因此，若系第一次实施洗钱（不属于“多次”），且主动退赃、配合追缴，未造成上述损失或其他严重后果，则不符合该条列举的情形，一般不认定为“情节严重”。<sup class="ref">1</sup>另需注意，二次以上实施洗钱犯罪行为依法应予刑事处理而未经处理的，洗钱数额累计计算。<sup class="ref">1</sup></div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-002#第四条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例4 范某洗钱案(0.82)</span><span class="chip">案例5 冯某才等人贩卖毒品、洗钱案(0.64)</span><span class="chip">案例3 李某华洗钱案(0.53)</span></div></div><div><h3>参考答案</h3><div class="key">不是超过五百万就一定算“情节严重”。还要有多次洗钱、拒不配合追缴、造成损失250万以上等情形；第一次干且主动退赃，一般不算。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H04</span><span class="qtext"><span class="text">我认识一个人，他通过境内银行卡搞非法买卖外汇，金额有一千六百多万，还让境内的人买比特币、泰达币，再转卖给境外的人换美元现金。他说虚拟货币不是外汇，所以不算犯罪。这说法对吗？用虚拟货币把犯罪所得转出去，算不算洗钱？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.948<br>11.4s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">该说法不对。1. 非法买卖外汇：违反国家规定，实施倒买倒卖外汇或者变相买卖外汇等非法买卖外汇行为，扰乱金融市场秩序，情节严重的，依照刑法第二百二十五条第四项以非法经营罪定罪处罚<sup class="ref">1</sup>；其金额1600余万元是否属“情节严重”需按司法解释规定的数额标准认定，资料未列具体数额标准。2. 虚拟货币不是外汇不影响定性：虚拟货币相关业务活动属于非法金融活动，开展法定货币与虚拟货币兑换、虚拟货币之间兑换等一律严格禁止<sup class="ref">2</sup>；金融机构和非银行支付机构不得为虚拟货币相关业务活动提供账户开立、资金划转和清算结算等服务<sup class="ref">3</sup>。3. 用虚拟货币把犯罪所得转出去，可能构成洗钱罪：为掩饰、隐瞒七类上游犯罪所得及收益来源和性质，通过“虚拟资产”交易、金融资产兑换方式转移、转换的，可认定为刑法第一百九十一条第一款第五项“以其他方法”<sup class="ref">4</sup>；跨境转移资产的亦属洗钱行为<sup class="ref">5</sup>。参考案例中，通过虚拟币交易转换毒品犯罪所得被认定构成洗钱罪<sup class="ref">6</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-001#第二条</span><span class="chip gold">PUB-026#第一项</span><span class="chip">PUB-026#第四项</span><span class="chip gold">PUB-002#第五条</span><span class="chip">PUB-012#第一百九十一条</span><span class="chip">PUB-042#案例4 龙某贩卖毒品、洗钱案·正文</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例4 龙某贩卖毒品、洗钱案(0.89)</span><span class="chip">案例3 李某华洗钱案(0.86)</span><span class="chip">案例1 黄某洗钱案(0.70)</span></div></div><div><h3>参考答案</h3><div class="key">他说法不对。虚拟货币不是外汇，但用虚拟货币转移犯罪所得，可以认定为洗钱；非法买卖外汇金额大，也可能构成非法经营。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H05</span><span class="qtext"><span class="text">我有个亲戚，他用假的境外直接投资通道，把自己的钱从境内弄到境外去了。他说这是合法的境外投资，可后来外汇局罚了他一百多万。这到底算逃汇、套汇，还是非法经营？个人自有资金也不能随便往境外出吗？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.909<br>8.7s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">个人自有资金也不能随意汇出境外，用虚假境外直接投资通道将境内资金转移境外，属于逃汇行为，可能构成逃汇罪，不是套汇或非法经营。
+1. 定性：公司、企业或其他单位违反国家规定，擅自将外汇存放境外，或将境内外汇非法转移到境外，数额较大的构成逃汇罪，对单位判罚金，对直接负责的主管人员和其他直接责任人员处五年以下有期徒刑或拘役；数额巨大或有其他严重情节的，处五年以上有期徒刑<sup class="ref">1</sup><sup class="ref">2</sup>。
+2. 行政后果：有违反规定将境内外汇转移境外等逃汇行为的，由外汇管理机关责令限期调回外汇，处逃汇金额30%以下的罚款；情节严重的，处逃汇金额30%以上等值以下的罚款；构成犯罪的依法追究刑事责任<sup class="ref">3</sup>。
+3. 个人对外直接投资须符合规定并经外汇局核准，还应办理境外投资外汇登记<sup class="ref">4</sup>；以虚假或构造交易汇出资金用于特殊目的公司的，按《外汇管理条例》第三十九条处罚<sup class="ref">5</sup>。
+4. 资料中未出现“套汇”的独立罪名或处罚条款，也未显示该行为按非法经营处理。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip">PUB-047#第三项</span><span class="chip">PUB-012#第一百九十条</span><span class="chip gold">PUB-017#第三十九条</span><span class="chip">PUB-007#第十六条</span><span class="chip">PUB-031#第十五项</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="empty">未展示</span></div></div><div><h3>参考答案</h3><div class="key">属于逃汇。个人自有资金也不能随便往境外出，必须走合规渠道。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H06</span><span class="qtext"><span class="text">我听说如果有人在国外搞洗钱，危害到咱们国家的主权安全，或者侵犯了国内老百姓的合法权益，或者扰乱了国内金融秩序，中国法律也能管。这是真的吗？那要是人在国外，钱也在国外，咱们能怎么追究他？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.995<br>9.4s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">是真的。在境外的洗钱和恐怖主义融资活动，危害我国主权和安全、侵犯我国公民、法人和其他组织合法权益，或者扰乱境内金融秩序的，依照《反洗钱法》及相关法律规定处理并追究法律责任<sup class="ref">1</sup>。追究方式上：涉及追究洗钱犯罪的司法协助，依照《中华人民共和国国际刑事司法协助法》及有关法律办理<sup class="ref">2</sup>；构成犯罪的依法追究刑事责任，利用金融机构、特定非金融机构实施或通过非法渠道实施洗钱犯罪的，依法追究刑事责任<sup class="ref">3</sup>。此外，国家有关机关依法调查时可按照对等原则或经与有关国家协商一致，要求境内开立代理行账户或与我国有其他密切金融联系的境外金融机构予以配合<sup class="ref">4</sup>；境外金融机构对国家有关机关调查不予配合的，可依第五十四条、第五十六条处罚，并可视情形列入相关名单<sup class="ref">5</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-014#第十二条</span><span class="chip">PUB-014#第四十八条</span><span class="chip">PUB-014#第六十二条</span><span class="chip">PUB-014#第四十九条</span><span class="chip">PUB-014#第五十七条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例1 黄某洗钱案(0.76)</span></div></div><div><h3>参考答案</h3><div class="key">是真的。中国法律可以管；可依照反洗钱法等追究，并通过司法协助、跨境调查、冻结追缴等方式落实。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H07</span><span class="qtext"><span class="text">我想问一下，到底哪些行为算洗钱？比如通过虚构交易、虚设债权债务来转移犯罪所得，或者通过虚拟资产交易，或者把犯罪所得拿去典当、租赁、买卖换成别的资产，这些都算吗？如果只是把钱存自己银行账户里，没动，算不算洗钱？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.995<br>10.2s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">通过虚构交易、虚设债权债务转移犯罪所得，通过虚拟资产交易转换犯罪所得，以及通过典当、租赁、买卖、投资等方式转移、转换犯罪所得，均可认定为洗钱行为；仅将钱存入自己账户未作转移、转换的，一般不构成洗钱罪。
+
+1. 上述行为属于刑法第一百九十一条第一款第五项“以其他方法掩饰、隐瞒犯罪所得及其收益的来源和性质”，前提是上游犯罪属于该条规定的七类犯罪（毒品、黑社会性质的组织、恐怖活动、走私、贪污贿赂、破坏金融管理秩序、金融诈骗犯罪）<sup class="ref">1</sup><sup class="ref">2</sup><sup class="ref">3</sup>。
+2. 具体包括：通过典当、租赁、买卖、投资、拍卖、购买金融产品等方式转移、转换；通过虚构交易、虚设债权债务、虚假担保、虚报收入等方式转移、转换；通过“虚拟资产”交易、金融资产兑换方式转移、转换等<sup class="ref">1</sup>。
+3. 洗钱罪还要求主观上知道或应当知道是他人上游犯罪所得及其收益，并为掩饰、隐瞒其来源和性质而实施<sup class="ref">4</sup>；本人实施上游犯罪后自洗钱的，同样依第一百九十一条定罪处罚<sup class="ref">5</sup>。
+4. 仅将钱存入自己银行账户、未实施转移、转换等掩饰隐瞒行为的，不符合“有下列行为之一”的构成要件，一般不构成洗钱罪<sup class="ref">3</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-002#第五条</span><span class="chip">PUB-002#第十二条</span><span class="chip gold">PUB-012#第一百九十一条</span><span class="chip">PUB-002#第二条</span><span class="chip">PUB-002#第一条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例3 李某华洗钱案(0.97)</span><span class="chip">案例5 冯某才等人贩卖毒品、洗钱案(0.89)</span><span class="chip">案例3 姜某某洗钱案(0.87)</span></div></div><div><h3>参考答案</h3><div class="key">虚构交易、虚设债权债务、虚拟资产交易、典当租赁买卖转换资产，都算洗钱；只把钱存自己账户里不动，一般不算。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H08</span><span class="qtext"><span class="text">我听说一个案子，黄某某他们通过私人账户把钱转到地下钱庄，再汇兑到香港公司，然后香港公司以外商名义给境内公司付款，资金回流，最后骗了8.7亿出口退税，判了无期。我就想问，他们通过地下钱庄往香港转钱，这中间用了哪些洗钱手段？要是他们拿一部分骗来的钱在香港买房子，这算不算洗钱罪？为什么？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.985<br>10.6s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">一、地下钱庄转香港环节的洗钱手段：通过转账或其他支付结算方式转移资金、跨境转移资产，属刑法第一百九十一条第一款第三、四项的行为方式<sup class="ref">1</sup>；以境内外“对敲”方式实现资金跨国（境）兑付，属变相买卖外汇，情节严重的以非法经营罪定罪处罚<sup class="ref">2</sup><sup class="ref">3</sup>。二、用骗来的钱在香港买房：一般不构成洗钱罪。因骗取出口退税属危害税收征管罪，不在刑法第一百九十一条列明的七类上游犯罪（毒品、黑社会性质组织、恐怖活动、走私、贪污贿赂、破坏金融管理秩序、金融诈骗犯罪）之内<sup class="ref">1</sup>，故不符合洗钱罪上游犯罪范围；但明知是犯罪所得而予以转移、转换的，可能构成刑法第三百一十二条掩饰、隐瞒犯罪所得、犯罪所得收益罪<sup class="ref">4</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-012#第一百九十一条</span><span class="chip">PUB-048#第5问</span><span class="chip">PUB-001#第二条</span><span class="chip gold">PUB-012#第三百一十二条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例1 黄某洗钱案(0.94)</span><span class="chip">案例3 李某华洗钱案(0.94)</span><span class="chip">案例1 李某聪洗钱案(0.93)</span></div></div><div><h3>参考答案</h3><div class="key">骗取出口退税罪本身不属于刑法第191条规定的七类洗钱罪上游犯罪，因此不能仅因行为人将骗取出口退税所得用于购买香港房产，就当然认定构成洗钱罪。是否构成刑法第191条洗钱罪，还需判断上游犯罪是否属于第191条规定的范围，以及相关行为是否符合第191条规定的行为方式。若不构成洗钱罪，则应进一步结合行为主体、主观明知以及具体转移、隐匿、使用行为，分析是否涉及刑法第312条掩饰、隐瞒犯罪所得、犯罪所得收益罪。（YHW 审定，2026-09-30）</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H09</span><span class="qtext"><span class="text">我有个做生意的朋友，他一个月内用10个不同账户往境外同一个账户转了800万，银行觉得可疑。我想问，银行发现这种可疑交易，按反洗钱法应该做什么？这种转账行为一般属于洗钱的哪个阶段？是放置、离析还是融合？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.933<br>8.1s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">银行发现可疑交易，应及时向反洗钱监测分析机构提交可疑交易报告并保密<sup class="ref">1</sup>；明显涉嫌洗钱等情形的，还应在提交报告同时向所在地中国人民银行或其分支机构报告并配合反洗钱调查<sup class="ref">2</sup>。该行为一般属于洗钱三阶段中的&quot;离析&quot;（分层）阶段——通过多个账户划转、转移资金以掩饰来源和性质<sup class="ref">3</sup>。若上游属七类犯罪，此类跨境转移资产行为可能构成洗钱罪<sup class="ref">4</sup>。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-014#第三十五条</span><span class="chip">PUB-040#第十七条</span><span class="chip">PUB-037#案例3 李某华洗钱案·正文(2)</span><span class="chip">PUB-012#第一百九十一条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例3 李某华洗钱案(0.84)</span></div></div><div><h3>参考答案</h3><div class="key">（1）银行应做客户尽职调查、提交可疑交易报告、保存记录，必要时限制交易或报告有关部门。（2）属于离析阶段。</div></div></div></details><details class="q" data-type="normal"><summary><span class="qid">H10</span><span class="qtext"><span class="text">我看新闻说内地和香港警方打掉一个跨境地下钱庄，他们用“对敲”、虚假贸易、现金黄金走私、虚拟货币交易这些手段，给赌博诈骗的人转移资金，抓了170多人，冻结了1500多万。我想知道，这个“对敲”到底怎么操作的？跟以前那种资金池的地下钱庄有啥不一样？还有，他们又用现金黄金又用虚拟货币，这些手段分别钻了哪些监管的空子？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.755<br>12.0s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">“对敲”是变相买卖外汇的典型方式：不法分子与境外人员、企业、机构相勾结，或利用开立在境外的银行账户，协助他人跨境汇款、转移资金；资金在境内外单向循环，不发生物理流动，通常以对账形式实现“两地平衡”，即资金跨国（境）兑付。<sup class="ref">1</sup> 它与传统“换汇黄牛”式倒买倒卖外汇（在境内黑市低买高卖赚取汇率差价）不同，后者是境内直接交易，前者是境内外兑付、无资金实际跨境。<sup class="ref">1</sup> 此类行为属非法买卖外汇，情节严重的以非法经营罪定罪处罚，<sup class="ref">1</sup><sup class="ref">2</sup> 尚不构成犯罪的，由外汇管理机关警告、没收违法所得并处违法金额30%以下罚款，情节严重的处30%以上等值以下罚款。<sup class="ref">3</sup> 关于现金黄金、虚拟货币具体“钻监管空子”的手法，知识库中没有相关规定。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip gold">PUB-048#第5问</span><span class="chip gold">PUB-001#第二条</span><span class="chip">PUB-017#第四十五条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例3 李某华洗钱案(0.32)</span></div></div><div><h3>参考答案</h3><div class="key">（1）对敲是境内收人民币、境外付外币，资金不实际跨境。（2）情节严重的，按非法经营罪处罚（刑法第二百二十五条、两高地下钱庄司法解释第二条）。（3）对敲与资金池的区别、现金黄金和虚拟货币钻了哪些监管空子：知识库无相关依据时如实说明依据不足，不得编造。（原参考答案要求讲清对敲与资金池的区别、现金黄金钻海关和物流监管空子、虚拟货币钻加密资产匿名和跨境监管空白，知识库无依据，2026-10-01 修订）</div></div></div></details></section>
+</div>
+<script>
+const btns=[...document.querySelectorAll('.toolbar button')];
+const items=[...document.querySelectorAll('details.q')];
+const count=document.querySelector('.toolbar .count');
+function apply(f){
+  let n=0;
+  items.forEach(el=>{const show=f==='all'||(f==='flag'?el.classList.contains('flag'):el.dataset.type===f);
+    el.hidden=!show; if(show)n++;});
+  btns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.f===f)));
+  count.textContent=n+' 题';
+}
+btns.forEach(b=>b.addEventListener('click',()=>apply(b.dataset.f)));
+apply(document.querySelector('details.q.flag')?'flag':'all');
+</script>
+</html>

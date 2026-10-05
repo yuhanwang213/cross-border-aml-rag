@@ -1,0 +1,26 @@
+# 凭据（DEEPSEEK_API_KEY 放在 .env，由 rag/generator.py 读取）
+.env
+.env.*
+.envy
+*.key
+
+# 可重建的索引与中间产物：python scripts/build_chunks.py && python scripts/build_index.py
+data/chroma/
+data/chunks.jsonl
+data/sparse.json
+
+# 本地备份
+backups/
+
+# Python / 环境
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# 本地工具与系统文件
+.claude/
+.DS_Store
+Regulations/Untitled.ipynb

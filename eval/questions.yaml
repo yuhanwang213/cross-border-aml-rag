@@ -1,0 +1,157 @@
+# 评测集：资金出境与反洗钱（草稿，待审核）
+#
+# 字段说明
+#   id           N=法规问答，C=应展示案例的问答，O=知识库外，S=场景评估
+#   type         normal / out_of_kb / scenario
+#   question     问题（场景题是用户描述的想做的事）
+#   gold         标准条款 chunk_id，命中其中任意一条即算检索命中；out_of_kb 为空
+#   must         答案要点关键词：每项都必须出现在回答中；一项内用 | 分隔同义写法
+#   expect       answer = 应当回答；refuse = 应当拒答
+#   expect_case  true = 应展示相关案例；false = 不应展示；不填 = 不考核
+#   key          参考答案要点（人工核对用，不参与自动打分）
+
+# ---------- 法规问答 ----------
+- {id: N01, type: normal, expect: answer, expect_case: false,
+   question: 个人每年购汇的便利化额度是多少？,
+   gold: [PUB-005#第五十四条, PUB-008#第二条], must: ["5万美元|5 万美元|五万美元"],
+   key: 每人每年等值5万美元}
+- {id: N02, type: normal, expect: answer, expect_case: false,
+   question: 携带多少外币现钞出境需要申领《携带证》？,
+   gold: [PUB-036#第五条, PUB-036#第七条], must: ["5000美元", "10000美元|1万美元"],
+   key: 5000美元以内不需申领；5000-10000美元需申领携带证；原则上不得超过10000美元}
+- {id: N03, type: normal, expect: answer, expect_case: false,
+   question: 入境时携带外币现钞超过多少需要向海关申报？,
+   gold: [PUB-036#第三条, PUB-005#第八十九条], must: ["5000美元"],
+   key: 超过等值5000美元书面申报；当天/短期多次往返另有规定}
+- {id: N04, type: normal, expect: answer, expect_case: false,
+   question: 金融机构大额现金交易的报告标准是多少？,
+   gold: [PUB-040#第五条], must: ["5万元", "1万美元"],
+   key: 当日单笔或累计人民币5万元以上、外币等值1万美元以上的现金交易}
+- {id: N05, type: normal, expect: answer, expect_case: false,
+   question: 大额交易报告应该在多长时间内提交？,
+   gold: [PUB-040#第八条], must: ["5个工作日"],
+   key: 大额交易发生之日起5个工作日内}
+- {id: N06, type: normal, expect: answer, expect_case: false,
+   question: 可疑交易报告有没有金额起点？,
+   gold: [PUB-040#第十一条], must: ["不论"],
+   key: 不论所涉资金金额或资产价值大小}
+- {id: N07, type: normal, expect: answer, expect_case: false,
+   question: 金融机构要把客户身份资料和交易记录保存多久？,
+   gold: [PUB-041#第四十四条, PUB-014#第三十四条], must: ["10年|十年"],
+   key: 业务关系/交易结束后至少保存10年}
+- {id: N08, type: normal, expect: answer, expect_case: false,
+   question: 公司的受益所有人怎么认定？,
+   gold: [PUB-028#第六条, PUB-028#第十五条], must: ["25%"],
+   key: 直接或间接拥有25%以上股权/收益权，或实际控制等}
+- {id: N09, type: normal, expect: answer,
+   question: 非法买卖外汇达到什么程度属于"情节严重"？,
+   gold: [PUB-001#第三条], must: ["五百万|500万", "十万|10万"],
+   key: 非法经营数额500万元以上或违法所得10万元以上}
+- {id: N10, type: normal, expect: answer,
+   question: 洗钱罪的上游犯罪包括哪些？,
+   gold: [PUB-002#第十二条, PUB-012#第一百九十一条], must: ["毒品", "走私", "金融诈骗"],
+   key: 毒品、黑社会性质组织、恐怖活动、走私、贪污贿赂、破坏金融管理秩序、金融诈骗七类}
+- {id: N11, type: normal, expect: answer,
+   question: 为掩饰自己上游犯罪所得而转移资金（自洗钱）构成洗钱罪吗？,
+   gold: [PUB-002#第一条], must: ["构成|定罪处罚"],
+   key: 构成，依照刑法第一百九十一条定罪处罚}
+- {id: N12, type: normal, expect: answer,
+   question: 为电信诈骗提供支付结算帮助，达到什么金额算情节严重？,
+   gold: [PUB-003#第十二条], must: ["二十万|20万"],
+   key: 支付结算金额二十万元以上等情形}
+- {id: N13, type: normal, expect: answer,
+   question: 犯洗钱罪的罚金是怎么规定的？,
+   gold: [PUB-002#第九条, PUB-012#第一百九十一条], must: ["一万元|1万元", "二十万元|20万元"],
+   key: 五年以下并处罚金的判一万元以上；五至十年的并处二十万元以上}
+- {id: N14, type: normal, expect: answer,
+   question: 比特币等虚拟货币在我国有法定货币地位吗？,
+   gold: [PUB-026#第一项], must: ["不具有"],
+   key: 不具有与法定货币等同的法律地位}
+- {id: N15, type: normal, expect: answer, expect_case: false,
+   question: 个人用分拆方式购汇会有什么后果？,
+   gold: [PUB-005#第六十二条], must: ["关注名单"],
+   key: 不得分拆规避便利化额度；外汇局实行"关注名单"管理}
+- {id: N16, type: normal, expect: answer, expect_case: false,
+   question: 逃汇会受到什么行政处罚？,
+   gold: [PUB-017#第三十九条], must: ["30%"],
+   key: 责令调回，处逃汇金额30%以下罚款；情节严重的30%以上等值以下}
+- {id: N17, type: normal, expect: answer, expect_case: false,
+   question: 企业境外投资哪些项目需要国家发展改革委核准？,
+   gold: [PUB-021#第十三条], must: ["敏感"],
+   key: 敏感类项目（敏感国家和地区、敏感行业）}
+- {id: N18, type: normal, expect: answer, expect_case: false,
+   question: 境内居民个人设立特殊目的公司需要办理什么外汇手续？,
+   gold: [PUB-031#第二项, PUB-031#第三项], must: ["登记"],
+   key: 向外汇局申请办理境外投资外汇登记}
+- {id: N19, type: normal, expect: answer, expect_case: false,
+   question: 需要对哪些名单所列对象采取反洗钱特别预防措施？,
+   gold: [PUB-027#第二条], must: ["恐怖"],
+   key: 恐怖活动组织和人员名单、联合国安理会决议名单等}
+- {id: N20, type: normal, expect: answer, expect_case: false,
+   question: 境内机构办理境外直接投资外汇登记需要提交哪些材料？,
+   gold: [PUB-033#第七条], must: ["申请"],
+   key: 书面申请及登记申请表、核准文件等}
+- {id: N21, type: normal, expect: answer, expect_case: false,
+   question: 在微信群里找换汇黄牛私下买卖美元，有什么法律后果？,
+   gold: [PUB-001#第二条, PUB-012#第二百二十五条, PUB-017#第四十五条], must: ["非法经营", "30%"],
+   key: 私自买卖外汇，由外汇局警告、没收违法所得，处违法金额30%以下罚款，情节严重的30%以上等值以下（外汇管理条例第四十五条）；
+        倒买倒卖外汇情节严重的，按刑法第二百二十五条非法经营罪处罚（两高解释第二条；非法经营数额500万元或违法所得10万元以上为情节严重）}
+- {id: N22, type: normal, expect: answer,          # 案例不考核：通过地下钱庄转移资金的洗钱案例与本题相关
+   question: 公司帮客户在境内收人民币、再通过境外账户替客户代付货款，算不算违法？,
+   gold: [PUB-001#第二条, PUB-001#第一条, PUB-012#第二百二十五条, PUB-017#第四十五条], must: ["非法经营", "变相买卖外汇|非法从事资金支付结算"],
+   key: 境内收人民币、境外付外币属资金跨境兑付，是变相买卖外汇（两高解释第二条，答记者问第5问）；也可能构成非法从事资金支付结算业务（第一条）；
+        情节严重的按刑法第二百二十五条非法经营罪处罚；行政上适用外汇管理条例第四十五条}
+- {id: N23, type: normal, expect: answer, expect_case: false,
+   question: 入境时带了超过规定金额的外币现钞没有向海关申报，会受到什么处罚？,
+   gold: [PUB-017#第四十二条, PUB-046#第十九条], must: ["20%"],
+   key: 外汇管理条例第四十二条：违反规定携带外汇出入境的，外汇局警告，可处违法金额20%以下罚款；海关处罚的从其规定（海关行政处罚实施条例第十九条：未申报或申报不实，警告，可处物品价值20%以下罚款）}
+- {id: N24, type: normal, expect: answer, expect_case: false,
+   question: 跑分平台是怎么运作的？,
+   gold: [PUB-003#第十二条, PUB-012#第二百八十七条之二, PUB-015#第三十一条], must: ["帮助信息网络犯罪"],
+   key: 只问运作方式，未问后果。跑分即提供银行账户、支付账户为他人收款转账（支付结算帮助）；应主动写明后果：
+        反电诈法第三十一条禁止出租、出借、出售银行账户和支付账户；明知他人利用信息网络犯罪而提供支付结算帮助，
+        支付结算金额二十万元以上等情形构成帮助信息网络犯罪活动罪（刑法第二百八十七条之二，帮信解释第十二条）}
+- {id: N25, type: normal, expect: answer, expect_case: false,
+   question: 什么是“拆分购汇”，常见做法有哪些？,
+   gold: [PUB-005#第六十二条, PUB-007#第七条], must: ["关注名单"],
+   key: 只问概念和做法，未问后果。个人以分拆等方式（如借用、出借他人便利化额度）规避便利化额度及真实性管理；
+        应主动写明后果：个人外汇管理办法第七条禁止分拆逃避限额监管；外汇局对规避管理的个人实行"关注名单"管理（经常项目外汇业务指引第六十二条）}
+
+# ---------- 应展示案例 ----------
+- {id: C01, type: normal, expect: answer, expect_case: true,
+   question: 亲属把受贿所得的钱拿去买房、理财，会构成洗钱罪吗？,
+   gold: [PUB-002#第二条, PUB-012#第一百九十一条, PUB-002#第五条], must: ["洗钱"],
+   key: 明知是贪污贿赂犯罪所得而掩饰隐瞒其来源和性质的，构成洗钱罪；参考马某益、张某受贿洗钱案}
+- {id: C02, type: normal, expect: answer, expect_case: true,
+   question: 把非法集资的钱通过地下钱庄转到境外，属于洗钱吗？,
+   gold: [PUB-012#第一百九十一条, PUB-002#第五条, PUB-002#第二条], must: ["构成洗钱罪|可构成洗钱罪|可能构成洗钱罪"],
+   key: 跨境转移资产属于洗钱行为之一；参考黄某洗钱案、刘某香案}
+
+# ---------- 知识库外：应拒答，不应展示案例 ----------
+- {id: O01, type: out_of_kb, expect: refuse, expect_case: false, question: 个人所得税的起征点是多少？, gold: []}
+- {id: O02, type: out_of_kb, expect: refuse, expect_case: false, question: 办理美国留学签证需要准备哪些材料？, gold: []}
+- {id: O03, type: out_of_kb, expect: refuse, expect_case: false, question: 增值税一般纳税人销售货物的税率是多少？, gold: []}
+- {id: O04, type: out_of_kb, expect: refuse, expect_case: false, question: 公司食堂几点开饭？, gold: []}
+- {id: O05, type: out_of_kb, expect: refuse, expect_case: false, question: 股票的涨跌停限制是多少？, gold: []}
+
+# ---------- 场景评估：用户描述想做的事 ----------
+- {id: S01, type: scenario, expect: answer,
+   question: 我想把80万人民币换成美元，汇给在美国读书的孩子交学费和生活费,
+   gold: [PUB-005#第五十四条, PUB-008#第二条, PUB-008#第十四条], must: ["5万美元|5 万美元|五万美元"],
+   key: 年度便利化额度5万美元；留学学费生活费可凭真实性材料在额度外办理；不得分拆}
+- {id: S02, type: scenario, expect: answer, expect_case: false,
+   question: 我打算出国旅游，准备带3万美元现金出境,
+   gold: [PUB-036#第七条, PUB-036#第五条], must: ["10000美元|1万美元", "原则上不得|原则上不能|原则上不允许|原则上不可以"],
+   key: 原则上不得超过10000美元；超出需另行审批或改用汇款/卡}
+- {id: S03, type: scenario, expect: answer,
+   question: 我想让几个亲戚每人帮我换5万美元，凑够钱在国外买房,
+   gold: [PUB-005#第六十二条], must: ["分拆", "关注名单"],
+   key: 属于分拆购汇规避额度管理，出借额度者和借用者均被列入关注名单；境外购房属资本项目}
+- {id: S04, type: scenario, expect: answer,
+   question: 朋友让我把银行卡借给他收款，每月给我2000元好处费，我能这样做吗？,
+   gold: [PUB-003#第十二条, PUB-012#第二百八十七条之二], must: ["帮助信息网络犯罪"],
+   key: 明知他人利用网络犯罪提供支付结算帮助，可能构成帮信罪}
+- {id: S05, type: scenario, expect: answer, expect_case: true,
+   question: 我准备帮朋友把他贩毒赚的钱买成虚拟币再转到境外,
+   gold: [PUB-012#第一百九十一条, PUB-002#第二条, PUB-002#第五条], must: ["洗钱罪"],
+   key: 毒品犯罪属上游犯罪，明知而帮助转移构成洗钱罪；参考冯某才、龙某贩毒洗钱案}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAG 评测报告</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;700&family=JetBrains+Mono&display=swap">
+<style>
+/* 布局：顶部摘要 → 指标条 → 可筛选的逐题清单（每题可展开看回答、引用、案例） */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --ink:#1b2330; --muted:#5c6776; --line:#dde1e7;
+  --accent:#b3261e; --accent-soft:#f8e6e4;
+  --ok:#1f7a4d; --ok-soft:#e3f2ea; --warn:#9a6700; --warn-soft:#fbf1dc; --bad:#b3261e; --bad-soft:#f8e6e4;
+  --risk:#b4541a; --risk-soft:#fbebe0;
+  --display:"Noto Serif SC","Songti SC","STSong",serif;
+  --body:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --surface:#1a2029; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2c3440;
+  --accent:#ef7b6f; --accent-soft:#3a2220;
+  --ok:#5fc592; --ok-soft:#173226; --warn:#e3b04b; --warn-soft:#3a2f15; --bad:#ef7b6f; --bad-soft:#3a2220;
+  --risk:#f09a5e; --risk-soft:#3a2818; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --surface:#1a2029; --ink:#e6e9ee; --muted:#9aa4b2; --line:#2c3440;
+  --accent:#ef7b6f; --accent-soft:#3a2220;
+  --ok:#5fc592; --ok-soft:#173226; --warn:#e3b04b; --warn-soft:#3a2f15; --bad:#ef7b6f; --bad-soft:#3a2220;
+  --risk:#f09a5e; --risk-soft:#3a2818; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:15px/1.65 var(--body);margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding:32px 20px 64px;display:grid;gap:28px}
+header{display:grid;gap:6px;border-bottom:2px solid var(--ink);padding-bottom:16px}
+.eyebrow{font:600 12px/1 var(--body);letter-spacing:.12em;color:var(--accent)}
+h1{font:700 30px/1.25 var(--display);margin:0;text-wrap:balance}
+.meta{color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+.kpi{background:var(--surface);padding:14px 16px;display:grid;gap:4px;min-width:0}
+.kpi .name{font-size:13px;color:var(--muted)}
+.kpi .val{font:700 28px/1.1 var(--display);font-variant-numeric:tabular-nums}
+.kpi .frac{font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.kpi .bar{height:4px;background:var(--line)}
+.kpi .bar i{display:block;height:100%;background:var(--ok)}
+.kpi.inverse .bar i{background:var(--accent)}
+.kpi .hint{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toolbar button{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  padding:5px 12px;border-radius:999px;cursor:pointer}
+.toolbar button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.toolbar button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toolbar .count{margin-left:auto;color:var(--muted);font-size:13px}
+.list{display:grid;gap:8px}
+details.q{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok)}
+details.q.flag{border-left-color:var(--accent)}
+summary{list-style:none;cursor:pointer;padding:12px 16px;display:grid;grid-template-columns:52px 1fr auto;gap:12px;align-items:start}
+summary::-webkit-details-marker{display:none}
+.qid{font:600 13px var(--mono);color:var(--muted);padding-top:2px}
+.qtext{min-width:0;display:grid;gap:6px}
+.qtext .text{font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-size:12px;line-height:1;padding:4px 8px;border-radius:4px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.pill.ok{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.pill.warn{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.pill.risk{background:var(--risk-soft);color:var(--risk);border-color:transparent}
+.pill.bad{background:var(--bad-soft);color:var(--bad);border-color:transparent}
+.side{text-align:right;font:12px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.body{padding:4px 16px 18px 80px;display:grid;gap:14px;min-width:0}
+.body h3{font:600 12px/1 var(--body);letter-spacing:.1em;color:var(--muted);margin:0 0 6px}
+.answer{white-space:pre-wrap;max-width:72ch;overflow-wrap:anywhere}
+.ref{color:var(--accent);font-weight:700;font-size:11px;padding:0 1px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:12px var(--mono);padding:3px 7px;border:1px solid var(--line);border-radius:3px;overflow-wrap:anywhere}
+.chip.gold{border-color:var(--ok);color:var(--ok)}
+.issues{color:var(--accent);font-weight:600}
+.key{color:var(--muted);font-size:14px}
+.empty{color:var(--muted)}
+@media (max-width:640px){
+  summary{grid-template-columns:1fr;gap:6px}
+  .side{text-align:left}
+  .body{padding:4px 16px 18px}
+  h1{font-size:24px}
+}
+@media (prefers-reduced-motion:no-preference){details.q{transition:border-color .2s}}
+</style>
+<div class="wrap">
+<header>
+  <span class="eyebrow">资金出境与反洗钱合规问答 · 完整问答评测</span>
+  <h1>评测报告 2026-10-01 11:20</h1>
+  <span class="meta">共 1 题：法规问答 1、场景评估 0、知识库外 0；
+  需关注 0 题；平均每题 20.7 秒。数据来源：detail_full_20261001_1120.csv</span>
+</header>
+<section class="kpis"><div class="kpi"><span class="name">检索命中率</span><span class="val">—</span><span class="frac">0/0</span><span class="bar"><i style="width:0%"></i></span><span class="hint">标准条款出现在检索结果中</span></div><div class="kpi"><span class="name">引用准确率</span><span class="val">—</span><span class="frac">0/0</span><span class="bar"><i style="width:0%"></i></span><span class="hint">作答且引用了标准条款</span></div><div class="kpi"><span class="name">要点覆盖率</span><span class="val">100%</span><span class="frac">1/1</span><span class="bar"><i style="width:100%"></i></span><span class="hint">回答包含全部必备要点</span></div><div class="kpi"><span class="name">拒答正确率</span><span class="val">—</span><span class="frac">0/0</span><span class="bar"><i style="width:0%"></i></span><span class="hint">知识库外问题正确拒答</span></div><div class="kpi inverse"><span class="name">误拒率</span><span class="val">0%</span><span class="frac">0/1</span><span class="bar"><i style="width:0%"></i></span><span class="hint">应回答却拒答，越低越好</span></div><div class="kpi"><span class="name">案例触发准确率</span><span class="val">—</span><span class="frac">0/0</span><span class="bar"><i style="width:0%"></i></span><span class="hint">该展示案例时展示、不该时不展示</span></div></section>
+<section class="toolbar" aria-label="筛选">
+  <button type="button" data-f="all">全部</button>
+  <button type="button" data-f="flag">需关注</button>
+  <button type="button" data-f="normal">法规问答</button>
+  <button type="button" data-f="scenario">场景评估</button>
+  <button type="button" data-f="out_of_kb">知识库外</button>
+  <span class="count"></span>
+</section>
+<section class="list"><details class="q" data-type="normal"><summary><span class="qid">H10</span><span class="qtext"><span class="text">我看新闻说内地和香港警方打掉一个跨境地下钱庄，他们用“对敲”、虚假贸易、现金黄金走私、虚拟货币交易这些手段，给赌博诈骗的人转移资金，抓了170多人，冻结了1500多万。我想知道，这个“对敲”到底怎么操作的？跟以前那种资金池的地下钱庄有啥不一样？还有，他们又用现金黄金又用虚拟货币，这些手段分别钻了哪些监管的空子？</span><span class="tags"><span class="pill">法规问答</span><span class="pill ok">通过</span></span></span><span class="side">top 0.755<br>20.7s</span></summary><div class="body"><div><h3>回答</h3><div class="answer">1.“对敲”型（变相买卖外汇）的操作：不法分子与境外人员、企业、机构相勾结，或利用开立在境外的银行账户，协助他人跨境汇款、转移资金；资金在境内外单向循环、不发生物理流动，通常以对账形式实现“两地平衡”，属变相买卖外汇，是当前多数地下钱庄的主要业务和重点打击对象<sup class="ref">1</sup>。传统“换汇黄牛”则是在国内外汇黑市低买高卖赚取汇率差价（倒买倒卖外汇）<sup class="ref">1</sup>。资料未对“资金池”型地下钱庄作定义，无法比较。
+2.现金黄金、虚拟货币手段：资料仅将“通过买卖彩票、奖券、储值卡、黄金等贵金属等方式”和“通过‘虚拟资产’交易、金融资产兑换方式”转移、转换犯罪所得及其收益，列为洗钱罪“以其他方法掩饰、隐瞒”的情形<sup class="ref">2</sup>；未说明其“钻了哪些监管空子”，此部分知识库无相关规定。</div></div><div><h3>引用的条款</h3><div class="chips"><span class="chip">PUB-048#第5问</span><span class="chip">PUB-002#第五条</span></div></div><div><h3>展示的案例</h3><div class="chips"><span class="chip">案例3 李某华洗钱案(0.32)</span></div></div><div><h3>参考答案</h3><div class="key">（1）对敲是境内收人民币、境外付外币，资金不实际跨境；资金池靠自建池平衡，对敲靠境内外两头对冲，不需自建池。（2）现金黄金钻海关和物流监管空子；虚拟货币钻加密资产匿名和跨境监管空白。</div></div></div></details></section>
+</div>
+<script>
+const btns=[...document.querySelectorAll('.toolbar button')];
+const items=[...document.querySelectorAll('details.q')];
+const count=document.querySelector('.toolbar .count');
+function apply(f){
+  let n=0;
+  items.forEach(el=>{const show=f==='all'||(f==='flag'?el.classList.contains('flag'):el.dataset.type===f);
+    el.hidden=!show; if(show)n++;});
+  btns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.f===f)));
+  count.textContent=n+' 题';
+}
+btns.forEach(b=>b.addEventListener('click',()=>apply(b.dataset.f)));
+apply(document.querySelector('details.q.flag')?'flag':'all');
+</script>
+</html>

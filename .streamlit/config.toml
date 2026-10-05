@@ -1,0 +1,8 @@
+[server]
+# Streamlit 的文件监视器会遍历 sys.modules，触发 transformers 大量懒加载模块导入，
+# 导致日志刷屏、页面卡在"检索并生成中"。关闭即可（改代码后手动刷新/重启）。
+fileWatcherType = "none"
+headless = true
+
+[browser]
+gatherUsageStats = false
