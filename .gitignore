@@ -1,6 +1,7 @@
 # 凭据（DEEPSEEK_API_KEY 放在 .env，由 rag/generator.py 读取）
 .env
 .env.*
+!.env.example
 .envy
 *.key
 
